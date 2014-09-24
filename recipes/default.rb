@@ -24,8 +24,16 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
+# Security Monkey uses the JSON data type first introduced in PostgreSQL 9.2
+# https://wiki.postgresql.org/wiki/What%27s_new_in_PostgreSQL_9.2#JSON_datatype
+raise "node['postgresql']['version'] is #{node['postgresql']['version']} and " +
+  "must be greater than or equal to 9.2" if 
+  Chef::VersionConstraint.new("< 9.2").include?(node['postgresql']['version'])
+
+require 'chef/version_constraint'
 include_recipe "python::default"
 include_recipe "build-essential::default"
+include_recipe "postgresql::server"
 python_pip "setuptools"
 
 #FQDN is now set in the attributes file...use ot
@@ -107,14 +115,18 @@ end
 
 #upgrade datatables
 bash "create_database" do
+  user "postgres"
+  code "createdb secmonkey"
+  not_if "psql -lqt | cut -d \| -f 1 | grep -w secmonkey", :user => 'postgres'
+  action :nothing
+  notifies :run, "bash[upgrade_database]", :immediately
+end
+
+bash "upgrade_database" do
   user "root"
   cwd node['security_monkey']['basedir']
-  code <<-EOF
-  sudo -u postgres createdb secmonkey
-  python manage.py db upgrade
-  EOF
+  code "python manage.py db upgrade"
   environment "SECURITY_MONKEY_SETTINGS" => "#{node['security_monkey']['basedir']}/env-config/config-deploy.py"
-  not_if "psql -lqt | cut -d \| -f 1 | grep -w secmonkey", :user => 'posstgres'
   action :nothing
 end
 
