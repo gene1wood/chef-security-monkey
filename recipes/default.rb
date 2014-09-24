@@ -25,6 +25,7 @@
 #
 
 include_recipe "python::default"
+include_recipe "build-essential::default"
 python_pip "setuptools"
 
 #FQDN is now set in the attributes file...use ot
