@@ -69,6 +69,43 @@ git node['security_monkey']['basedir'] do
   notifies :run, "bash[install_security_monkey]", :immediately
 end
 
+$virtualenv = File.join(node['security_monkey']['basedir'], ".virtualenv")
+$is_python27 = Chef::VersionConstraint.new("~> 2.7").include?(node['languages']['python']['version'])
+if $is_python27 then
+  $python_interpreter = "python"
+else
+  if platform_family?("rhel", "fedora") then
+    package "python27"
+    package "python27-devel"
+  elsif platform_family?("debian") then
+    package "python2.7"
+    package "python2.7-dev"
+  end
+  $python_interpreter = "python2.7"
+end
+
+python_virtualenv $virtualenv do
+  owner "root"
+  group "root"
+  interpreter $python_interpreter
+end
+
+for required_package in [["Flask-Script", nil],
+                      ["Flask-SQLAlchemy", nil],
+                      ["Flask-Login", nil],
+                      ["Flask-Security", nil],
+                      ["Flask-RESTful", nil],
+                      ["boto", nil],
+                      ["apscheduler", "2.1"],
+                      ["gunicorn", nil],
+                      ["Flask-Migrate", nil],
+                      ["psycopg2", nil]] do
+  python_pip required_package[0] do
+    virtualenv $virtualenv
+    version required_package[1]
+  end
+end
+
 bash "install_security_monkey" do
   environment ({ 'HOME' => node['security_monkey']['homedir'], 
     'USER' => node['security_monkey']['user'], 
@@ -78,7 +115,7 @@ bash "install_security_monkey" do
   umask "022"
   cwd node['security_monkey']['basedir']
   code <<-EOF
-  python setup.py install
+  #{$virtualenv}/bin/python setup.py install
   EOF
   action :nothing
 end
@@ -125,7 +162,7 @@ end
 bash "upgrade_database" do
   user "root"
   cwd node['security_monkey']['basedir']
-  code "python manage.py db upgrade"
+  code "#{$virtualenv}/bin/python manage.py db upgrade"
   environment "SECURITY_MONKEY_SETTINGS" => "#{node['security_monkey']['basedir']}/env-config/config-deploy.py"
   action :nothing
 end
