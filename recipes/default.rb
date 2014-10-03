@@ -60,15 +60,6 @@ directory node['security_monkey']['basedir'] do
   action :create
 end
 
-git node['security_monkey']['basedir'] do
-  repository 'https://github.com/Netflix/security_monkey.git'
-  revision node['security_monkey']['branch']
-  user node['security_monkey']['user']
-  group node['security_monkey']['group']
-  action :sync
-  notifies :run, "bash[install_security_monkey]", :immediately
-end
-
 $virtualenv = File.join(node['security_monkey']['basedir'], ".virtualenv")
 $is_python27 = Chef::VersionConstraint.new("~> 2.7").include?(node['languages']['python']['version'])
 if $is_python27 then
@@ -105,6 +96,17 @@ for required_package in [["Flask-Script", nil],
     version required_package[1]
   end
 end
+
+git node['security_monkey']['basedir'] do
+  repository 'https://github.com/Netflix/security_monkey.git'
+  revision node['security_monkey']['branch']
+  user node['security_monkey']['user']
+  group node['security_monkey']['group']
+  action :sync
+  notifies :run, "bash[install_security_monkey]", :immediately
+end
+
+
 
 bash "install_security_monkey" do
   environment ({ 'HOME' => node['security_monkey']['homedir'], 
