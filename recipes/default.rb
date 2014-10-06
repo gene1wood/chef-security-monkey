@@ -167,8 +167,15 @@ bash "upgrade_database" do
   action :nothing
 end
 
+# workaround for https://tickets.opscode.com/browse/CHEF-2320
+easy_install_package "supervisor" do
+  only_if { platform_family?('rhel') }
+end
+
 #ensure supervisor is available
-package "supervisor"
+package "supervisor" do
+  not_if { platform_family?('rhel') }
+end
 
 template "#{node['security_monkey']['basedir']}/supervisor/security_monkey.ini" do
   mode "0644"
@@ -180,8 +187,8 @@ bash "install_supervisor" do
   user "root"
   cwd "#{node['security_monkey']['basedir']}/supervisor"
   code <<-EOF
-  sudo -E supervisord -c security_monkey.ini
-  sudo -E supervisorctl -c security_monkey.ini
+  supervisord -c security_monkey.ini
+  supervisorctl -c security_monkey.ini
   EOF
   environment 'SECURITY_MONKEY_SETTINGS' => "#{node['security_monkey']['basedir']}/env-config/config-deploy.py"
   action :nothing
