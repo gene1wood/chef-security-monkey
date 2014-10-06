@@ -41,6 +41,7 @@ end
 file "/etc/nginx/sites-enabled/default" do
   action :delete
   notifies :restart, 'service[nginx]'
+  not_if { platform_family?("rhel") }
 end
 
 my_key_path = node['security_monkey']['nginx']['ssl_key']
@@ -55,7 +56,7 @@ end
 
 # Create Nginx main configuration file
 template "securitymonkey.conf.erb" do
-  path "/etc/nginx/sites-available/securitymonkey.conf"
+  path platform_family?("rhel") ? "/etc/nginx/conf.d/securitymonkey.conf" : "/etc/nginx/sites-available/securitymonkey.conf"
   source "nginx/securitymonkey.conf.erb"
   owner "root"
   mode 0644
@@ -65,4 +66,5 @@ end
 link "/etc/nginx/sites-enabled/securitymonkey.conf" do
   to "/etc/nginx/sites-available/securitymonkey.conf"
   notifies :restart, 'service[nginx]', :immediately
+  not_if { platform_family?("rhel") }
 end
