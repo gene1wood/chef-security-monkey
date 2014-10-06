@@ -60,7 +60,7 @@ directory node['security_monkey']['basedir'] do
   action :create
 end
 
-$virtualenv = File.join(node['security_monkey']['basedir'], ".virtualenv")
+$virtualenv = File.join(node['security_monkey']['homedir'], ".virtualenv")
 $is_python27 = Chef::VersionConstraint.new("~> 2.7").include?(node['languages']['python']['version'])
 if $is_python27 then
   $python_interpreter = "python"
@@ -76,8 +76,8 @@ else
 end
 
 python_virtualenv $virtualenv do
-  owner "root"
-  group "root"
+  owner node['security_monkey']['user']
+  group node['security_monkey']['group']
   interpreter $python_interpreter
 end
 
@@ -105,8 +105,6 @@ git node['security_monkey']['basedir'] do
   action :sync
   notifies :run, "bash[install_security_monkey]", :immediately
 end
-
-
 
 bash "install_security_monkey" do
   environment ({ 'HOME' => node['security_monkey']['homedir'], 
