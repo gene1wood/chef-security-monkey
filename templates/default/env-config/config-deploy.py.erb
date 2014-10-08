@@ -2,7 +2,7 @@
 # This will be fed into Flask/SQLAlchemy inside security_monkey/__init__.py
 
 LOG_LEVEL = "DEBUG"
-LOG_FILE = "security_monkey-deploy.log"
+LOG_FILE = "/tmp/security_monkey-deploy.log"
 
 SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:<%= node['postgresql']['password']['postgres'] %>@localhost:5432/secmonkey'
 
