@@ -180,6 +180,7 @@ end
 template "#{node['security_monkey']['basedir']}/supervisor/security_monkey.ini" do
   mode "0644"
   source "supervisor/security_monkey.ini.erb"
+  variables ({ :virtualenv => $virtualenv })
   notifies :run, "bash[install_supervisor]"
 end
 
