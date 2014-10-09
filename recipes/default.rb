@@ -123,7 +123,7 @@ end
 
 #the deploy log is setup via the setup.py script and won't be writeable by
 #our permissions limted user...let's fix that
-file "#{node['security_monkey']['basedir']}/security_monkey-deploy.log" do
+file "/tmp/security_monkey-deploy.log" do
   owner node['security_monkey']['user']
   group node['security_monkey']['group']
   action :create
