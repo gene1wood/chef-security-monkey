@@ -90,7 +90,8 @@ for required_package in [["Flask-Script", nil],
                       ["apscheduler", "2.1"],
                       ["gunicorn", nil],
                       ["Flask-Migrate", nil],
-                      ["psycopg2", nil]] do
+                      ["psycopg2", nil],
+                      ["https://github.com/gene1wood/flask-browserid/archive/add-client-scheme-option.zip", nil]] do
   python_pip required_package[0] do
     virtualenv $virtualenv
     version required_package[1]
@@ -98,7 +99,7 @@ for required_package in [["Flask-Script", nil],
 end
 
 git node['security_monkey']['basedir'] do
-  repository 'https://github.com/Netflix/security_monkey.git'
+  repository 'https://github.com/gene1wood/security_monkey.git'
   revision node['security_monkey']['branch']
   user node['security_monkey']['user']
   group node['security_monkey']['group']
@@ -146,7 +147,8 @@ template "#{node['security_monkey']['basedir']}/env-config/config-deploy.py" do
   source "env-config/config-deploy.py.erb"
   variables ({ :target_fqdn => target_fqdn,
                :password_salt => password_salt,
-               :secret_key => secret_key })
+               :secret_key => secret_key,
+               :additional_options => node["security_monkey"]["additional_options"] })
   notifies :run, "bash[create_database]", :immediately
 end
 

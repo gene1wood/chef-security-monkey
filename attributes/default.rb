@@ -26,3 +26,5 @@ if !node['cloud_v2'].nil?
 else
   default['security_monkey']['target_fqdn'] = node['fqdn']
 end
+
+default['security_monkey']['additional_options'] = ''
