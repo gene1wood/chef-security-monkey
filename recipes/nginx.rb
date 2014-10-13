@@ -44,15 +44,13 @@ file "/etc/nginx/sites-enabled/default" do
   not_if { platform_family?("rhel") }
 end
 
-my_key_path = node['security_monkey']['nginx']['ssl_key']
-my_cert_path = node['security_monkey']['nginx']['ssl_cert']
-target_fqdn = node['security_monkey']['target_fqdn']
-
-ssl_certificate "security_monkey" do
-  key_path my_key_path
-  cert_path my_cert_path
-  common_name target_fqdn
+# Install certificate
+node.override['security_monkey']['nginx']['common_name'] = node['security_monkey']['target_fqdn']
+ssl_certificate "securitymonkey" do
+  dir "/etc/ssl/certs"
+  namespace node['security_monkey']['nginx']
 end
+
 
 # Create Nginx main configuration file
 template "securitymonkey.conf.erb" do

@@ -7,9 +7,6 @@ default['security_monkey']['password_salt'] = nil
 
 default['security_monkey']['postgres']
 
-default['security_monkey']['nginx']['ssl_cert'] = '/etc/ssl/certs/securitymonkey.pem'
-default['security_monkey']['nginx']['ssl_key'] = '/etc/ssl/certs/securitymonkey.key'
-
 default['security_monkey']['mail_sender'] = 'securitymonkey@example.tld'
 default['security_monkey']['security_team_email'] = 'securityteam@example.tld'
 
