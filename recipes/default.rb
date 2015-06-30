@@ -39,6 +39,18 @@ python_pip "setuptools"
 #FQDN is now set in the attributes file...use ot
 target_fqdn = node['security_monkey']['target_fqdn']
 
+remote_file "#{Chef::Config[:file_cache_path]}/dartsdk-linux-x64-release.zip" do
+  source "https://storage.googleapis.com/dart-archive/channels/stable/release/1.11.0/sdk/dartsdk-linux-x64-release.zip"
+  checksum "a5f9f88fddd0f79d0912d23941d59a24f515de7515e0777212ce3dc0fc0d3b11"
+  notifies :run, "bash[extract_dart]", :immediately
+end
+
+bash "extract_dart" do
+  user "root"
+  code "unzip #{Chef::Config[:file_cache_path]}/dartsdk-linux-x64-release.zip -d #{Chef::Config[:file_cache_path]}"
+  action :nothing
+end
+
 user node['security_monkey']['user'] do
   home node['security_monkey']['homedir']
   system true
@@ -81,21 +93,18 @@ python_virtualenv $virtualenv do
   interpreter $python_interpreter
 end
 
-for required_package in [["Flask-Script", nil],
-                      ["Flask-SQLAlchemy", nil],
-                      ["Flask-Login", nil],
-                      ["Flask-Security", nil],
-                      ["Flask-RESTful", nil],
-                      ["boto", nil],
-                      ["apscheduler", "2.1"],
-                      ["gunicorn", nil],
-                      ["Flask-Migrate", nil],
-                      ["psycopg2", nil],
-                      ["https://github.com/gene1wood/flask-browserid/archive/add-client-scheme-option.zip", nil]] do
-  python_pip required_package[0] do
-    virtualenv $virtualenv
-    version required_package[1]
-  end
+python_pip "https://github.com/gene1wood/flask-browserid/archive/dev.zip" do
+  virtualenv $virtualenv
+end
+
+include_recipe "security-monkey::m2crypto"
+
+bash "install_pip_requirements" do
+  cwd node['security_monkey']['basedir']
+  code <<-EOF
+    #{$virtualenv}/bin/pip install --requirement requirements.txt
+  EOF
+  not_if "#{$virtualenv}/bin/pip list | grep \"^Flask \""
 end
 
 git node['security_monkey']['basedir'] do
@@ -104,7 +113,19 @@ git node['security_monkey']['basedir'] do
   user node['security_monkey']['user']
   group node['security_monkey']['group']
   action :sync
+  notifies :run, "bash[build_dart_pages]", :immediately
   notifies :run, "bash[install_security_monkey]", :immediately
+end
+
+bash "build_dart_pages" do
+  user "root"
+  cwd node['security_monkey']['basedir']
+  code <<-EOF
+    cd /opt/secmonkey/dart
+    #{Chef::Config[:file_cache_path]}/dart-sdk/bin/pub build
+    cp -R /opt/secmonkey/dart/build/web/* /opt/secmonkey/security_monkey/static/
+  EOF
+  action :nothing
 end
 
 bash "install_security_monkey" do
