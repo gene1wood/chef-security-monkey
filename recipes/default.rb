@@ -170,7 +170,6 @@ template "#{node['security_monkey']['basedir']}/env-config/config-deploy.py" do
                :password_salt => password_salt,
                :secret_key => secret_key,
                :additional_options => node["security_monkey"]["additional_options"] })
-  notifies :run, "bash[create_database]", :immediately
 end
 
 #upgrade datatables
@@ -178,7 +177,6 @@ bash "create_database" do
   user "postgres"
   code "createdb secmonkey"
   not_if "psql -lqt | cut -d \| -f 1 | grep -w secmonkey", :user => 'postgres'
-  action :nothing
   notifies :run, "bash[upgrade_database]", :immediately
 end
 
