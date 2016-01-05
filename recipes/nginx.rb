@@ -1,5 +1,11 @@
 # Install and configure ngingx to front Security Monkey
 #
+
+node.default['selinux']['booleans']['httpd_can_network_connect'] = 1
+include_recipe 'selinux'
+
+include_recipe 'yum-epel'
+
 package "nginx"
 
 # Create user and group for Nginx
