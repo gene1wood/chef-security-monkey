@@ -45,9 +45,6 @@ SES_REGION = 'us-east-1'
 # MAIL_USERNAME = 'securitymonkey'
 # MAIL_PASSWORD = '<YOURPASSWORD>'
 
-BROWSERID_LOGIN_URL = "/login"
-BROWSERID_LOGOUT_URL = "/logout"
-BROWSERID_CLIENT_DOMAIN = "<%= @target_fqdn %>"
-USE_BROWSERID = True
+TEMPLATES_DIRECTORY = '<%= node['security_monkey']['basedir'] %>/security_monkey/templates'
 
 <%= @additional_options %>

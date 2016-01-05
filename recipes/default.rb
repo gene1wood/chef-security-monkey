@@ -42,13 +42,14 @@ target_fqdn = node['security_monkey']['target_fqdn']
 remote_file "#{Chef::Config[:file_cache_path]}/dartsdk-linux-x64-release.zip" do
   source "https://storage.googleapis.com/dart-archive/channels/stable/release/1.11.0/sdk/dartsdk-linux-x64-release.zip"
   checksum "a5f9f88fddd0f79d0912d23941d59a24f515de7515e0777212ce3dc0fc0d3b11"
-  notifies :run, "bash[extract_dart]", :immediately
 end
+
+package "unzip"
 
 bash "extract_dart" do
   user "root"
   code "unzip #{Chef::Config[:file_cache_path]}/dartsdk-linux-x64-release.zip -d #{Chef::Config[:file_cache_path]}"
-  action :nothing
+  not_if do ::File.exists?("#{Chef::Config[:file_cache_path]}/dart-sdk/bin/pub") end
 end
 
 user node['security_monkey']['user'] do
@@ -93,11 +94,27 @@ python_virtualenv $virtualenv do
   interpreter $python_interpreter
 end
 
-python_pip "https://github.com/gene1wood/flask-browserid/archive/dev.zip" do
-  virtualenv $virtualenv
-end
+# python_pip "https://github.com/gene1wood/flask-browserid/archive/dev.zip" do
+#   virtualenv $virtualenv
+# end
 
 include_recipe "security-monkey::m2crypto"
+
+package "libffi-devel"
+package "xmlsec1"
+package "xmlsec1-openssl"
+package "openssl-devel"
+package "libyaml-devel"
+
+git node['security_monkey']['basedir'] do
+  repository 'https://github.com/gene1wood/security_monkey.git'
+  revision node['security_monkey']['branch']
+  user node['security_monkey']['user']
+  group node['security_monkey']['group']
+  action :checkout
+  notifies :run, "bash[build_dart_pages]", :immediately
+  notifies :run, "bash[install_security_monkey]", :immediately
+end
 
 bash "install_pip_requirements" do
   cwd node['security_monkey']['basedir']
@@ -105,16 +122,6 @@ bash "install_pip_requirements" do
     #{$virtualenv}/bin/pip install --requirement requirements.txt
   EOF
   not_if "#{$virtualenv}/bin/pip list | grep \"^Flask \""
-end
-
-git node['security_monkey']['basedir'] do
-  repository 'https://github.com/gene1wood/security_monkey.git'
-  revision node['security_monkey']['branch']
-  user node['security_monkey']['user']
-  group node['security_monkey']['group']
-  action :sync
-  notifies :run, "bash[build_dart_pages]", :immediately
-  notifies :run, "bash[install_security_monkey]", :immediately
 end
 
 bash "build_dart_pages" do
@@ -176,7 +183,7 @@ end
 bash "create_database" do
   user "postgres"
   code "createdb secmonkey"
-  not_if "psql -lqt | cut -d \| -f 1 | grep -w secmonkey", :user => 'postgres'
+  not_if "psql -lqt | cut -d '|' -f 1 | grep -w secmonkey", :user => 'postgres', :cwd => '/'
   notifies :run, "bash[upgrade_database]", :immediately
 end
 
@@ -193,24 +200,52 @@ easy_install_package "supervisor" do
   only_if { platform_family?('rhel') }
 end
 
-#ensure supervisor is available
+# ensure supervisor is available
 package "supervisor" do
   not_if { platform_family?('rhel') }
 end
 
-template "#{node['security_monkey']['basedir']}/supervisor/security_monkey.ini" do
+moz_security_monkey_basedir = '/opt/moz_security_monkey'
+
+git moz_security_monkey_basedir do
+  repository 'https://github.com/gene1wood/moz-security-monkey.git'
+  # revision node['moz_security_monkey']['branch']
+  user node['security_monkey']['user']
+  group node['security_monkey']['group']
+  action :checkout
+end
+
+bash "install_moz_security_monkey_pip_requirements" do
+  cwd "#{moz_security_monkey_basedir}/moz_security_monkey"
+  code <<-EOF
+    #{$virtualenv}/bin/pip install --requirement requirements.txt
+  EOF
+  not_if "#{$virtualenv}/bin/pip list | grep \"^mozdef_client \""
+end
+
+# template "#{node['security_monkey']['basedir']}/supervisor/security_monkey.ini" do
+#   mode "0644"
+#   source "supervisor/security_monkey.ini.erb"
+#   variables ({ :virtualenv => $virtualenv })
+#   notifies :run, "bash[install_supervisor]"
+# end
+
+
+
+template "#{node['security_monkey']['basedir']}/supervisor/moz_security_monkey.ini" do
   mode "0644"
-  source "supervisor/security_monkey.ini.erb"
+  source "supervisor/moz_security_monkey.ini.erb"
   variables ({ :virtualenv => $virtualenv })
   notifies :run, "bash[install_supervisor]"
 end
+
 
 bash "install_supervisor" do
   user "root"
   cwd "#{node['security_monkey']['basedir']}/supervisor"
   code <<-EOF
-  supervisord -c security_monkey.ini
-  supervisorctl -c security_monkey.ini
+  supervisord -c moz_security_monkey.ini
+  # supervisorctl -c moz_security_monkey.ini
   EOF
   environment 'SECURITY_MONKEY_SETTINGS' => "#{node['security_monkey']['basedir']}/env-config/config-deploy.py"
   action :nothing
