@@ -35,10 +35,10 @@ if platform_family?("rhel", "fedora") then
     # https://github.com/M2Crypto/M2Crypto/blob/master/fedora_setup.sh
     code <<-EOH
       for i in #{extract_dir}/SWIG/_{ec,evp}.i; do
-         sed -i -e "s/opensslconf\./opensslconf-#{node[:kernel][:machine]}\./" "$i"
+         sed -i -e 's/opensslconf\./opensslconf-#{node[:kernel][:machine]}\./' "$i"
       done
       EOH
-    only_if "grep \"opensslconf\.\" #{extract_dir}/SWIG/_{ec,evp}.i"
+    only_if 'grep "opensslconf\." #{extract_dir}/SWIG/_{ec,evp}.i'
   end
   
   bash "install_m2crypto" do
