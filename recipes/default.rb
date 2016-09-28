@@ -112,8 +112,6 @@ git node['security_monkey']['basedir'] do
   user node['security_monkey']['user']
   group node['security_monkey']['group']
   action :checkout
-  notifies :run, "bash[build_dart_pages]", :immediately
-  notifies :run, "bash[install_security_monkey]", :immediately
 end
 
 bash "install_pip_requirements" do
@@ -130,9 +128,10 @@ bash "build_dart_pages" do
   code <<-EOF
     cd /opt/secmonkey/dart
     #{Chef::Config[:file_cache_path]}/dart-sdk/bin/pub build
+    mkdir -p /opt/secmonkey/security_monkey/static
     cp -R /opt/secmonkey/dart/build/web/* /opt/secmonkey/security_monkey/static/
   EOF
-  action :nothing
+  not_if do ::File.exists?('/opt/secmonkey/security_monkey/static') end
 end
 
 bash "install_security_monkey" do
@@ -146,7 +145,7 @@ bash "install_security_monkey" do
   code <<-EOF
   #{$virtualenv}/bin/python setup.py install
   EOF
-  action :nothing
+  not_if do ::Dir.glob(node['security_monkey']['homedir'] + '/.virtualenv/lib/python2.7/site-packages/security_monkey*').any? end
 end
 
 #the deploy log is setup via the setup.py script and won't be writeable by
@@ -239,13 +238,21 @@ template "#{node['security_monkey']['basedir']}/supervisor/moz_security_monkey.i
   notifies :run, "bash[install_supervisor]"
 end
 
+template "#{node['security_monkey']['basedir']}/supervisor/moz_security_monkey.ini" do
+  mode "0644"
+  source "supervisor/moz_security_monkey.ini.erb"
+  variables ({ :virtualenv => $virtualenv })
+  notifies :run, "bash[install_supervisor]"
+end
+
+
 
 bash "install_supervisor" do
   user "root"
   cwd "#{node['security_monkey']['basedir']}/supervisor"
   code <<-EOF
-  supervisord -c moz_security_monkey.ini
-  # supervisorctl -c moz_security_monkey.ini
+  /usr/bin/supervisord -c "#{node['security_monkey']['basedir']}/supervisor/security_monkey.ini"
+  # /usr/bin/supervisorctl -c "#{node['security_monkey']['basedir']}/supervisor/security_monkey.ini"
   EOF
   environment 'SECURITY_MONKEY_SETTINGS' => "#{node['security_monkey']['basedir']}/env-config/config-deploy.py"
   action :nothing

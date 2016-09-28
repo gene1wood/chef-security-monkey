@@ -21,7 +21,7 @@ BASE_URL = 'https://<%= @target_fqdn %>'
 SECRET_KEY = '<%= @secret_key %>'
 
 MAIL_DEFAULT_SENDER = "<%= node['security_monkey']['mail_sender'] %>"
-SECURITY_REGISTERABLE = True
+SECURITY_REGISTERABLE = False
 SECURITY_CONFIRMABLE = False
 SECURITY_RECOVERABLE = False
 SECURITY_PASSWORD_HASH = 'bcrypt'
