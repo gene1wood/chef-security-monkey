@@ -6,8 +6,8 @@ add_header Content-Security-Policy "default-src 'self'; font-src 'self' https://
 
 server {
    listen      0.0.0.0:443 ssl;
-   ssl_certificate /etc/ssl/certs/securitymonkey.pem;
-   ssl_certificate_key /etc/ssl/certs/securitymonkey.key;
+   ssl_certificate <%= node['security_monkey']['nginx']['ssl_cert']['path'] %>;
+   ssl_certificate_key <%= node['security_monkey']['nginx']['ssl_key']['path'] %>;
    access_log  /var/log/nginx/log/securitymonkey.access.log;
    error_log   /var/log/nginx/log/securitymonkey.error.log;
 
